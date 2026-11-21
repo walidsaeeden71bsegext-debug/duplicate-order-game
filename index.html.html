@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Duplicate Order Duel (1v1) | LC SOP Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    /* =========================================================================
+       DESIGN TOKENS & RESET
+       ========================================================================= */
+    :root {
+      --p1: #FF5A00;
+      --p1-dark: #D94B00;
+      --p1-light: #FFF3EC;
+      --p1-border: #FFCBB0;
+      --p1-glow: rgba(255, 90, 0, 0.35);
+
+      --p2: #0284C7;
+      --p2-dark: #0369A1;
+      --p2-light: #EFF9FF;
+      --p2-border: #BAE6FD;
+      --p2-glow: rgba(2, 132, 199, 0.35);
+
+      --slate-900: #0F172A;
+      --slate-800: #1E293B;
+      --slate-700: #334155;
+      --slate-500: #64748B;
+      --slate-300: #CBD5E1;
+      --slate-200: #E2E8F0;
+
+      --cream: #FFFBF7;
+      --surface: #FFFFFF;
+
+      --green: #10B981;
+      --green-bg: #ECFDF5;
+      --green-dark: #065F46;
+      --red: #EF4444;
+      --red-bg: #FEF2F2;
+      --red-dark: #991B1B;
+      --amber: #F59E0B;
+
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.09);
+      --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.16);
+      --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: var(--font);
+      background: radial-gradient(circle at top right, #FFF2E6 0%, var(--cream) 45%, #F1F5F9 100%);
+      color: var(--slate-800);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Confetti Overlay Canvas */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* =========================================================================
+       TOP HEADER
+       ========================================================================= */
+    .topbar {
+      background: var(--slate-800);
+      color: #FFFFFF;
+      padding: 12px 20px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: 0 4px 16px rgba(15, 23, 42, 0.18);
+    }
+
+    .topbar-inner {
+      max-width: 1040px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--p1), #FF8533);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 4px 12px rgba(255, 90, 0, 0.4);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-weight: 900;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: #94A3B8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .topbar-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ctrl-btn {
+      background: rgba(255, 255, 255, 0.1);
+      color: #FFFFFF;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    /* =========================================================================
+       MAIN STAGE & ANIMATIONS
+       ========================================================================= */
+    .stage {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    .screen {
+      display: none;
+      animation: fadeUp 0.32s ease;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    /* =========================================================================
+       SHARED BUTTONS
+       ========================================================================= */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 14px 26px;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 800;
+      font-family: inherit;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--p1), #FF7A29);
+      color: #FFFFFF;
+      box-shadow: 0 8px 22px rgba(255, 90, 0, 0.34);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--p1-dark), var(--p1));
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px rgba(255, 90, 0, 0.44);
+    }
+
+    .btn-p2 {
+      background: linear-gradient(135deg, var(--p2), #0EA5E9);
+      color: #FFFFFF;
+      box-shadow: 0 8px 22px rgba(2, 132, 199, 0.34);
+    }
+
+    .btn-p2:hover {
+      background: linear-gradient(135deg, var(--p2-dark), var(--p2));
+      transform: translateY(-2px);
+    }
+
+    .btn-dark {
+      background: var(--slate-800);
+      color: #FFFFFF;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2);
+    }
+
+    .btn-dark:hover {
+      background: var(--slate-700);
+      transform: translateY(-2px);
+    }
+
+    .btn-outline {
+      background: var(--surface);
+      color: var(--slate-800);
+      border: 2px solid var(--slate-200);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--p1);
+      color: var(--p1);
+      background: var(--p1-light);
+    }
+
+    /* =========================================================================
+       1. SETUP SCREEN
+       ========================================================================= */
+    .setup-hero {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .setup-title {
+      font-size: clamp(1.9rem, 4.5vw, 2.85rem);
+      font-weight: 900;
+      color: var(--slate-900);
+      letter-spacing: -0.03em;
+      line-height: 1.12;
+      margin-bottom: 8px;
+    }
+
+    .setup-title span {
+      color: var(--p1);
+    }
+
+    .setup-subtitle {
+      font-size: 1.05rem;
+      color: var(--slate-500);
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .rule-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .rule-pill {
+      background: var(--surface);
+      border: 1px solid var(--slate-200);
+      color: var(--slate-800);
+      padding: 7px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      box-shadow: var(--shadow-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .players-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 18px;
+      align-items: center;
+      margin: 26px 0 28px;
+    }
+
+    .vs-circle {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--slate-800);
+      color: #FFFFFF;
+      font-weight: 900;
+      font-size: 1.15rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
+      border: 4px solid var(--surface);
+      margin: 0 auto;
+    }
+
+    .player-setup-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      border: 2px solid var(--slate-200);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .player-setup-card.p1-card {
+      border-top: 6px solid var(--p1);
+    }
+
+    .player-setup-card.p2-card {
+      border-top: 6px solid var(--p2);
+    }
+
+    .team-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 14px;
+    }
+
+    .p1-card .team-tag {
+      background: var(--p1-light);
+      color: var(--p1-dark);
+    }
+
+    .p2-card .team-tag {
+      background: var(--p2-light);
+      color: var(--p2-dark);
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .name-input {
+      width: 100%;
+      padding: 12px 15px;
+      border-radius: 12px;
+      border: 2px solid var(--slate-200);
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      color: var(--slate-900);
+      background: #F8FAFC;
+      margin-bottom: 18px;
+      transition: all 0.2s ease;
+    }
+
+    .p1-card .name-input:focus {
+      outline: none;
+      border-color: var(--p1);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 4px rgba(255, 90, 0, 0.14);
+    }
+
+    .p2-card .name-input:focus {
+      outline: none;
+      border-color: var(--p2);
+      background: #FFFFFF;
+      box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+    }
+
+    .avatar-picker {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .avatar-btn {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 2px solid var(--slate-200);
+      background: #F8FAFC;
+      font-size: 1.45rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.18s ease;
+    }
+
+    .avatar-btn:hover {
+      transform: scale(1.08);
+    }
+
+    .p1-card .avatar-btn.selected {
+      border-color: var(--p1);
+      background: var(--p1-light);
+      box-shadow: 0 4px 12px var(--p1-glow);
+      transform: scale(1.06);
+    }
+
+    .p2-card .avatar-btn.selected {
+      border-color: var(--p2);
+      background: var(--p2-light);
+      box-shadow: 0 4px 12px var(--p2-glow);
+      transform: scale(1.06);
+    }
+
+    .start-cta-wrap {
+      text-align: center;
+    }
+
+    .start-cta-wrap .btn-primary {
+      padding: 17px 46px;
+      font-size: 1.18rem;
+      border-radius: 16px;
+    }
+
+    /* =========================================================================
+       2. TOP VS SCOREBOARD (GAMEPLAY)
+       ========================================================================= */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .score-card {
+      background: var(--surface);
+      border: 2px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.25s ease;
+    }
+
+    .score-card.active-p1 {
+      border-color: var(--p1);
+      background: var(--p1-light);
+      box-shadow: 0 0 0 4px var(--p1-glow), var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .score-card.active-p2 {
+      border-color: var(--p2);
+      background: var(--p2-light);
+      box-shadow: 0 0 0 4px var(--p2-glow), var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .sc-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .sc-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: #FFFFFF;
+      border: 2px solid var(--slate-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .active-p1 .sc-avatar { border-color: var(--p1); }
+    .active-p2 .sc-avatar { border-color: var(--p2); }
+
+    .sc-name {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--slate-900);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .progress-dots {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .p-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--slate-200);
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 0 0 1px var(--slate-300);
+      transition: all 0.25s ease;
+    }
+
+    .p-dot.correct {
+      background: var(--green);
+      box-shadow: 0 0 0 1px var(--green);
+    }
+
+    .p-dot.wrong {
+      background: var(--red);
+      box-shadow: 0 0 0 1px var(--red);
+    }
+
+    .sc-points {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .sc-score-num {
+      font-size: 1.55rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .p1-text { color: var(--p1); }
+    .p2-text { color: var(--p2); }
+
+    .sc-score-lbl {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--slate-500);
+      text-transform: uppercase;
+    }
+
+    .sb-vs {
+      background: var(--slate-800);
+      color: #FFFFFF;
+      font-weight: 900;
+      font-size: 0.85rem;
+      padding: 8px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.06em;
+    }
+
+    /* =========================================================================
+       3. TURN TRANSITION BANNER (NO PEEKING!)
+       ========================================================================= */
+    .turn-banner {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 46px 28px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      border: 3px solid var(--slate-200);
+      max-width: 660px;
+      margin: 24px auto;
+      animation: popIn 0.3s ease;
+    }
+
+    .turn-banner.theme-p1 {
+      border-color: var(--p1);
+      background: linear-gradient(180deg, var(--p1-light) 0%, #FFFFFF 55%);
+    }
+
+    .turn-banner.theme-p2 {
+      border-color: var(--p2);
+      background: linear-gradient(180deg, var(--p2-light) 0%, #FFFFFF 55%);
+    }
+
+    .turn-avatar-big {
+      width: 84px;
+      height: 84px;
+      border-radius: 24px;
+      background: #FFFFFF;
+      font-size: 2.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      box-shadow: var(--shadow-md);
+      border: 3px solid var(--slate-200);
+    }
+
+    .theme-p1 .turn-avatar-big { border-color: var(--p1); }
+    .theme-p2 .turn-avatar-big { border-color: var(--p2); }
+
+    .turn-eyebrow {
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .turn-headline {
+      font-size: clamp(1.6rem, 3.6vw, 2.3rem);
+      font-weight: 900;
+      color: var(--slate-900);
+      margin-bottom: 10px;
+    }
+
+    .turn-note {
+      color: var(--slate-500);
+      font-size: 0.96rem;
+      margin-bottom: 26px;
+    }
+
+    /* =========================================================================
+       4. LIVE SUPPORT TICKET AREA
+       ========================================================================= */
+    .ticket-workspace {
+      display: none;
+      animation: fadeUp 0.3s ease;
+    }
+
+    .ticket-workspace.active {
+      display: block;
+    }
+
+    /* Timer Strip */
+    .timer-card {
+      background: var(--surface);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .timer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 800;
+      font-size: 0.9rem;
+    }
+
+    .timer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 12px;
+      border-radius: 999px;
+      background: var(--slate-800);
+      color: #FFFFFF;
+      font-size: 0.92rem;
+    }
+
+    .timer-badge.danger {
+      background: var(--red);
+      animation: shake 0.35s ease;
+    }
+
+    .timer-track {
+      width: 100%;
+      height: 10px;
+      background: var(--slate-200);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .timer-bar {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, var(--p1), #FF8C38);
+      border-radius: 999px;
+      transition: width 0.25s linear, background 0.25s ease;
+    }
+
+    .timer-bar.p2-bar {
+      background: linear-gradient(90deg, var(--p2), #38BDF8);
+    }
+
+    .timer-bar.warn {
+      background: linear-gradient(90deg, #F59E0B, #FBBF24);
+    }
+
+    .timer-bar.danger {
+      background: linear-gradient(90deg, #DC2626, #EF4444);
+    }
+
+    /* Incoming Live Ticket Box */
+    .ticket-card {
+      background: var(--surface);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .ticket-top {
+      background: var(--slate-800);
+      color: #FFFFFF;
+      padding: 15px 22px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .ticket-top-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25);
+    }
+
+    .ticket-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tag {
+      padding: 4px 11px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .tag-tmp { background: var(--p1); color: #FFFFFF; }
+    .tag-tgo { background: var(--p2); color: #FFFFFF; }
+    .tag-status { background: rgba(255, 255, 255, 0.14); color: #F8FAFC; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .tag-vendor { background: #F59E0B; color: #0F172A; }
+
+    .ticket-body {
+      padding: 24px;
+    }
+
+    .scenario-prompt {
+      background: #F8FAFC;
+      border: 1px solid var(--slate-200);
+      border-left: 5px solid var(--p1);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 22px;
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: var(--slate-900);
+      line-height: 1.5;
+    }
+
+    .scenario-prompt.p2-accent {
+      border-left-color: var(--p2);
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .opt-btn {
+      width: 100%;
+      text-align: left;
+      background: var(--surface);
+      border: 2px solid var(--slate-200);
+      border-radius: 16px;
+      padding: 16px 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-family: inherit;
+      color: var(--slate-800);
+      transition: all 0.18s ease;
+    }
+
+    .opt-btn:hover:not(:disabled) {
+      border-color: var(--p1);
+      background: var(--p1-light);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+    }
+
+    .p2-mode .opt-btn:hover:not(:disabled) {
+      border-color: var(--p2);
+      background: var(--p2-light);
+    }
+
+    .opt-btn:disabled {
+      cursor: default;
+      opacity: 0.72;
+    }
+
+    .opt-btn.is-correct {
+      border-color: var(--green);
+      background: var(--green-bg);
+      opacity: 1;
+    }
+
+    .opt-btn.is-wrong {
+      border-color: var(--red);
+      background: var(--red-bg);
+      opacity: 1;
+      animation: shake 0.35s ease;
+    }
+
+    .opt-letter {
+      width: 30px;
+      height: 30px;
+      border-radius: 9px;
+      background: #F1F5F9;
+      color: var(--slate-700);
+      font-weight: 800;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .opt-btn.is-correct .opt-letter { background: var(--green); color: #FFFFFF; }
+    .opt-btn.is-wrong .opt-letter { background: var(--red); color: #FFFFFF; }
+
+    .opt-text {
+      font-size: 0.96rem;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    /* Feedback Panel */
+    .feedback-box {
+      display: none;
+      margin-top: 20px;
+      border-radius: 16px;
+      padding: 20px;
+      animation: popIn 0.25s ease;
+    }
+
+    .feedback-box.show {
+      display: block;
+    }
+
+    .feedback-box.fb-correct {
+      background: var(--green-bg);
+      border: 2px solid var(--green);
+    }
+
+    .feedback-box.fb-wrong {
+      background: var(--red-bg);
+      border: 2px solid var(--red);
+    }
+
+    .fb-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .fb-title {
+      font-size: 1.15rem;
+      font-weight: 900;
+    }
+
+    .fb-correct .fb-title { color: var(--green-dark); }
+    .fb-wrong .fb-title { color: var(--red-dark); }
+
+    .fb-pts {
+      background: #FFFFFF;
+      color: var(--slate-900);
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .sop-rule-box {
+      background: rgba(255, 255, 255, 0.88);
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin-bottom: 16px;
+      font-size: 0.94rem;
+      color: var(--slate-800);
+    }
+
+    .sop-rule-label {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--p1-dark);
+      margin-bottom: 3px;
+    }
+
+    .fb-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* =========================================================================
+       5. WINNER / RESULTS SCREEN
+       ========================================================================= */
+    .results-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--slate-200);
+      overflow: hidden;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .results-banner {
+      background: linear-gradient(135deg, var(--slate-900) 0%, #26354D 60%, #432318 100%);
+      color: #FFFFFF;
+      padding: 38px 24px;
+      text-align: center;
+    }
+
+    .winner-crown {
+      font-size: 3.2rem;
+      line-height: 1;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .winner-pill {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--p1), #FF8533);
+      color: #FFFFFF;
+      padding: 6px 18px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .winner-headline {
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .winner-sub {
+      color: #CBD5E1;
+      font-size: 1rem;
+    }
+
+    .results-compare {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+      padding: 26px;
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--slate-200);
+    }
+
+    .res-player-box {
+      background: var(--surface);
+      border: 2px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      text-align: center;
+      position: relative;
+    }
+
+    .res-player-box.is-winner-p1 {
+      border-color: var(--p1);
+      box-shadow: 0 8px 24px var(--p1-glow);
+    }
+
+    .res-player-box.is-winner-p2 {
+      border-color: var(--p2);
+      box-shadow: 0 8px 24px var(--p2-glow);
+    }
+
+    .res-avatar {
+      font-size: 2.4rem;
+      margin-bottom: 6px;
+    }
+
+    .res-name {
+      font-weight: 900;
+      font-size: 1.15rem;
+      margin-bottom: 8px;
+    }
+
+    .res-score {
+      font-size: 2.2rem;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .res-meta {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--slate-500);
+      margin-bottom: 12px;
+    }
+
+    .res-badges {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .mini-q-badge {
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+      font-weight: 800;
+    }
+
+    .mini-q-badge.ok { background: var(--green-bg); color: var(--green-dark); }
+    .mini-q-badge.bad { background: var(--red-bg); color: var(--red-dark); }
+
+    .results-footer {
+      padding: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .deck-status {
+      width: 100%;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--slate-500);
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* =========================================================================
+       RESPONSIVE BREAKPOINTS
+       ========================================================================= */
+    @media (max-width: 780px) {
+      .players-grid {
+        grid-template-columns: 1fr;
+      }
+      .options-grid {
+        grid-template-columns: 1fr;
+      }
+      .scoreboard {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .sb-vs {
+        display: none;
+      }
+      .results-compare {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .brand-sub { display: none; }
+      .ticket-body { padding: 16px; }
+      .scenario-prompt { font-size: 1rem; }
+      .avatar-picker { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Top Header -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">⚔️</div>
+        <div>
+          <div class="brand-title">Duplicate Order Duel</div>
+          <div class="brand-sub">LC | tMP &amp; tGO SOP 1v1 Battle</div>
+        </div>
+      </div>
+      <div class="topbar-controls">
+        <button type="button" class="ctrl-btn" id="mute-btn" aria-label="Toggle Sound">
+          <span id="mute-icon">🔊</span>
+          <span id="mute-text">Sound On</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="stage">
+    <!-- =====================================================================
+         SCREEN 1: START / SETUP SCREEN
+         ===================================================================== -->
+    <section id="screen-setup" class="screen active">
+      <div class="setup-hero">
+        <h1 class="setup-title">Duplicate Order Duel — <span>1v1 Battle</span></h1>
+        <p class="setup-subtitle">LC | Duplicate Orders (tMP &amp; tGO) SOP Challenge</p>
+        <div class="rule-pills">
+          <span class="rule-pill">👥 2 Players</span>
+          <span class="rule-pill">❓ 2 Questions Each</span>
+          <span class="rule-pill">⏱️ 25s Timer + Speed Bonus</span>
+        </div>
+      </div>
+
+      <div class="players-grid">
+        <!-- Player 1 Card -->
+        <div class="player-setup-card p1-card">
+          <div class="team-tag">🔥 Player 1 • Orange Team</div>
+          <label class="input-label" for="p1-name">Player 1 Name</label>
+          <input type="text" id="p1-name" class="name-input" value="Agent 1" maxlength="20" placeholder="Enter Player 1 name" />
+          <span class="input-label">Choose Avatar</span>
+          <div class="avatar-picker" id="p1-avatars"></div>
+        </div>
+
+        <div class="vs-circle" aria-hidden="true">VS</div>
+
+        <!-- Player 2 Card -->
+        <div class="player-setup-card p2-card">
+          <div class="team-tag">⚡ Player 2 • Blue Team</div>
+          <label class="input-label" for="p2-name">Player 2 Name</label>
+          <input type="text" id="p2-name" class="name-input" value="Agent 2" maxlength="20" placeholder="Enter Player 2 name" />
+          <span class="input-label">Choose Avatar</span>
+          <div class="avatar-picker" id="p2-avatars"></div>
+        </div>
+      </div>
+
+      <div class="start-cta-wrap">
+        <button type="button" class="btn btn-primary" id="btn-start-duel">
+          ⚔️ Start Duel!
+        </button>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SCREEN 2: GAMEPLAY SCREEN (SCOREBOARD + TRANSITION + TICKET)
+         ===================================================================== -->
+    <section id="screen-game" class="screen">
+      <!-- Top VS Scoreboard -->
+      <div class="scoreboard">
+        <div class="score-card" id="sb-p1">
+          <div class="sc-left">
+            <div class="sc-avatar" id="sb-p1-avatar">🎧</div>
+            <div style="min-width:0;">
+              <div class="sc-name" id="sb-p1-name">Agent 1</div>
+              <div class="progress-dots" id="sb-p1-dots">
+                <span class="p-dot"></span>
+                <span class="p-dot"></span>
+              </div>
+            </div>
+          </div>
+          <div class="sc-points">
+            <div class="sc-score-num p1-text" id="sb-p1-score">0</div>
+            <div class="sc-score-lbl">Points</div>
+          </div>
+        </div>
+
+        <div class="sb-vs">VS</div>
+
+        <div class="score-card" id="sb-p2">
+          <div class="sc-left">
+            <div class="sc-avatar" id="sb-p2-avatar">🛵</div>
+            <div style="min-width:0;">
+              <div class="sc-name" id="sb-p2-name">Agent 2</div>
+              <div class="progress-dots" id="sb-p2-dots">
+                <span class="p-dot"></span>
+                <span class="p-dot"></span>
+              </div>
+            </div>
+          </div>
+          <div class="sc-points">
+            <div class="sc-score-num p2-text" id="sb-p2-score">0</div>
+            <div class="sc-score-lbl">Points</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Turn Transition Banner (Prevents Peeking) -->
+      <div id="turn-banner" class="turn-banner theme-p1">
+        <div class="turn-avatar-big" id="turn-avatar">🎧</div>
+        <div class="turn-eyebrow p1-text" id="turn-eyebrow">Up Next</div>
+        <h2 class="turn-headline" id="turn-headline">Agent 1's Turn — Question 1 of 2!</h2>
+        <p class="turn-note">Get ready! The 25-second timer starts as soon as you reveal the ticket.</p>
+        <button type="button" class="btn btn-primary" id="btn-show-ticket">
+          🎯 Ready — Show Ticket!
+        </button>
+      </div>
+
+      <!-- Active Ticket Workspace -->
+      <div id="ticket-workspace" class="ticket-workspace">
+        <!-- Timer Strip -->
+        <div class="timer-card">
+          <div class="timer-head">
+            <span id="active-turn-label">Agent 1 • Question 1 of 2</span>
+            <span class="timer-badge" id="timer-badge">⏱️ <span id="timer-sec">25</span>s</span>
+          </div>
+          <div class="timer-track">
+            <div class="timer-bar" id="timer-bar"></div>
+          </div>
+        </div>
+
+        <!-- Incoming Live Support Ticket -->
+        <div class="ticket-card" id="ticket-card">
+          <div class="ticket-top">
+            <div class="ticket-top-title">
+              <span class="live-dot"></span>
+              <span>Incoming Live Support Ticket</span>
+            </div>
+            <div class="ticket-tags" id="ticket-tags">
+              <!-- Tags injected dynamically -->
+            </div>
+          </div>
+
+          <div class="ticket-body">
+            <div class="scenario-prompt" id="scenario-prompt">
+              Loading scenario...
+            </div>
+
+            <div class="options-grid" id="options-grid">
+              <!-- 4 Options injected dynamically -->
+            </div>
+
+            <!-- Instant Feedback Panel -->
+            <div class="feedback-box" id="feedback-box" aria-live="polite">
+              <div class="fb-top">
+                <div class="fb-title" id="fb-title">✅ Correct!</div>
+                <div class="fb-pts" id="fb-pts">+180 pts</div>
+              </div>
+              <div class="sop-rule-box">
+                <span class="sop-rule-label">📋 SOP Rule</span>
+                <span id="fb-rule"></span>
+              </div>
+              <div class="fb-actions">
+                <button type="button" class="btn btn-dark" id="btn-next-turn">
+                  Next Turn ➡️
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         SCREEN 3: WINNER / RESULTS SCREEN
+         ===================================================================== -->
+    <section id="screen-results" class="screen">
+      <div class="results-card">
+        <div class="results-banner">
+          <span class="winner-crown" id="res-crown">🏆</span>
+          <div class="winner-pill" id="res-pill">Duel Champion</div>
+          <h2 class="winner-headline" id="res-headline">Agent 1 Wins!</h2>
+          <p class="winner-sub" id="res-sub">Lightning-fast SOP accuracy under pressure!</p>
+        </div>
+
+        <div class="results-compare">
+          <!-- Player 1 Summary -->
+          <div class="res-player-box" id="res-box-p1">
+            <div class="res-avatar" id="res-p1-avatar">🎧</div>
+            <div class="res-name" id="res-p1-name">Agent 1</div>
+            <div class="res-score p1-text" id="res-p1-score">0</div>
+            <div class="res-meta" id="res-p1-meta">0/2 Correct</div>
+            <div class="res-badges" id="res-p1-badges"></div>
+          </div>
+
+          <!-- Player 2 Summary -->
+          <div class="res-player-box" id="res-box-p2">
+            <div class="res-avatar" id="res-p2-avatar">🛵</div>
+            <div class="res-name" id="res-p2-name">Agent 2</div>
+            <div class="res-score p2-text" id="res-p2-score">0</div>
+            <div class="res-meta" id="res-p2-meta">0/2 Correct</div>
+            <div class="res-badges" id="res-p2-badges"></div>
+          </div>
+        </div>
+
+        <div class="results-footer">
+          <button type="button" class="btn btn-primary" id="btn-new-duel">
+            🔄 New Duel (Fresh Questions)
+          </button>
+          <button type="button" class="btn btn-outline" id="btn-change-players">
+            👥 Change Players
+          </button>
+          <div class="deck-status" id="deck-status">4 fresh questions ready from the 8-question SOP bank.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /* =========================================================================
+       1. WEB AUDIO API SYNTHESIZER (Zero External Audio Dependencies)
+       ========================================================================= */
+    const SoundFX = (() => {
+      let ctx = null;
+      let muted = false;
+
+      function getCtx() {
+        try {
+          if (!ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) ctx = new AudioCtx();
+          }
+          if (ctx && ctx.state === "suspended") ctx.resume();
+          return ctx;
+        } catch {
+          return null;
+        }
+      }
+
+      function tone(freq, duration, type = "sine", vol = 0.14, delay = 0) {
+        if (muted) return;
+        const audio = getCtx();
+        if (!audio) return;
+        try {
+          const osc = audio.createOscillator();
+          const gain = audio.createGain();
+          const t = audio.currentTime + delay;
+
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, t);
+
+          gain.gain.setValueAtTime(0.001, t);
+          gain.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+          osc.connect(gain);
+          gain.connect(audio.destination);
+
+          osc.start(t);
+          osc.stop(t + duration + 0.02);
+        } catch {
+          // Ignore audio errors
+        }
+      }
+
+      return {
+        toggleMute() {
+          muted = !muted;
+          return muted;
+        },
+        click() {
+          tone(600, 0.06, "sine", 0.1, 0);
+        },
+        tick() {
+          tone(920, 0.045, "sine", 0.07, 0);
+        },
+        correct() {
+          tone(523.25, 0.12, "triangle", 0.16, 0);
+          tone(659.25, 0.12, "triangle", 0.16, 0.09);
+          tone(783.99, 0.22, "triangle", 0.18, 0.18);
+        },
+        wrong() {
+          tone(210, 0.18, "sawtooth", 0.11, 0);
+          tone(155, 0.28, "sawtooth", 0.12, 0.15);
+        },
+        fanfare() {
+          const notes = [523.25, 659.25, 783.99, 1046.5];
+          notes.forEach((n, idx) => tone(n, 0.26, "triangle", 0.17, idx * 0.11));
+        }
+      };
+    })();
+
+    /* =========================================================================
+       2. SOP QUESTION BANK (8 Accurate Questions for LC | Duplicate Orders)
+       ========================================================================= */
+    const QUESTION_BANK = [
+      {
+        id: 1,
+        platform: "tMP & tGO",
+        status: "Definition Check",
+        vendor: "Diff. Branch",
+        prompt: "A customer ordered from the same restaurant (different branch) using the same mobile number 45 minutes later. Is this a Duplicate Order?",
+        options: [
+          { text: "Yes — same restaurant (even different branch), same mobile number, within 1 hour.", correct: true },
+          { text: "No — both orders must be placed at the exact same branch to qualify.", correct: false },
+          { text: "No — it only counts as a duplicate if placed within 15 minutes.", correct: false },
+          { text: "Only if the food items in both carts are 100% identical.", correct: false }
+        ],
+        rule: "Duplicate Order Definition: When the customer places another order from the same restaurant (even if it's a different branch) using the same mobile number within 1 hour."
+      },
+      {
+        id: 2,
+        platform: "tMP & tGO",
+        status: "Both Active",
+        vendor: "CST Choice",
+        prompt: "A hungry customer made a duplicate order and tells you they want to KEEP both orders. What must you inform them?",
+        options: [
+          { text: "Delivery fees apply for both orders, and the second order might be delayed based on the order time difference.", correct: true },
+          { text: "The second order's delivery fee will be waived automatically.", correct: false },
+          { text: "We must cancel the second order because duplicate orders are not allowed.", correct: false },
+          { text: "Both orders will be merged into one bag and delivered at the exact same time.", correct: false }
+        ],
+        rule: "If the customer wants both orders, inform them that delivery fees apply for both orders and the second order might be delayed based on the order time difference."
+      },
+      {
+        id: 3,
+        platform: "tMP",
+        status: "In-Progress",
+        vendor: "Any Vendor",
+        prompt: "A tMP customer wants to cancel their 2nd order, and its status is 'In-Progress'. What is the right action?",
+        options: [
+          { text: "Cancel immediately with the reason: (CST- Duplicate order).", correct: true },
+          { text: "Wait until the order becomes 'Successful', then call the restaurant.", correct: false },
+          { text: "Cancel with the reason: (Canceled before preparation).", correct: false },
+          { text: "Don't cancel and use the 'No Cancellation Policy' script.", correct: false }
+        ],
+        rule: "When the order status is In-Progress, cancel immediately with the reason: (CST- Duplicate order)."
+      },
+      {
+        id: 4,
+        platform: "tMP",
+        status: "Successful • Picked Up",
+        vendor: "Any Vendor",
+        prompt: "A tMP duplicate order is 'Successful' and already 'Picked Up' by the driver. What should you do?",
+        options: [
+          { text: "Don't cancel and use the 'No Cancellation Policy' script.", correct: true },
+          { text: "Cancel immediately with the reason: (CST- Duplicate order).", correct: false },
+          { text: "Tell the driver to return the order to the restaurant and cancel it.", correct: false },
+          { text: "Cancel with the reason: (Canceled before preparation).", correct: false }
+        ],
+        rule: "For a Successful tMP order that is already Picked Up, do NOT cancel — use the 'No Cancellation Policy' script."
+      },
+      {
+        id: 5,
+        platform: "tMP",
+        status: "Successful • Not Picked Up",
+        vendor: "FV (Food)",
+        prompt: "A tMP order is Not Picked Up at an FV restaurant. You call the restaurant and they confirm they have NOT started preparing it. What is the cancellation reason?",
+        options: [
+          { text: "Cancel order with the reason: (Canceled before preparation).", correct: true },
+          { text: "Cancel order with the reason: (CST- Duplicate order).", correct: false },
+          { text: "Don't cancel and use the 'No Cancellation Policy' script.", correct: false },
+          { text: "Cancel order with the reason: (Vendor requested cancellation).", correct: false }
+        ],
+        rule: "When a Not Picked Up FV order has NOT been prepared yet, cancel with the exact reason: (Canceled before preparation)."
+      },
+      {
+        id: 6,
+        platform: "tMP",
+        status: "Successful • Not Picked Up",
+        vendor: "NFV (Non-Food)",
+        prompt: "A tMP duplicate order is Not Picked Up from an NFV vendor. You try calling the vendor to inform them, and they are unreachable. What do you do?",
+        options: [
+          { text: "Cancel with the reason (CST- Duplicate order) whether reachable or unreachable.", correct: true },
+          { text: "Don't cancel because the vendor is unreachable — use 'No Cancellation Policy'.", correct: false },
+          { text: "Cancel with the reason: (Canceled before preparation).", correct: false },
+          { text: "Keep calling for 15 minutes until someone picks up before deciding.", correct: false }
+        ],
+        rule: "In tMP (Not Picked Up → NFV): Call the vendor to inform them and, whether reachable or unreachable, cancel with the reason (CST- Duplicate order)."
+      },
+      {
+        id: 7,
+        platform: "tGO",
+        status: "Successful",
+        vendor: "Unreachable",
+        prompt: "On a tGO duplicate order that is 'Successful', you call the vendor to confirm if it's picked up, but the vendor is Unreachable. What is the SOP action?",
+        options: [
+          { text: "Don't cancel and use the 'No Cancellation Policy' script.", correct: true },
+          { text: "Cancel immediately with the reason: (CST- Duplicate order).", correct: false },
+          { text: "Assume it is Not Picked Up and cancel before preparation.", correct: false },
+          { text: "Cancel it only if the customer asks twice.", correct: false }
+        ],
+        rule: "In tGO (Successful): Call the vendor to confirm pickup. If the order is Picked Up OR the vendor is Unreachable, do NOT cancel — use the 'No Cancellation Policy' script."
+      },
+      {
+        id: 8,
+        platform: "tGO",
+        status: "Successful • Not Picked Up",
+        vendor: "FV (Preparing)",
+        prompt: "On a tGO duplicate order, the vendor confirms it is Not Picked Up, it's an FV restaurant, and they ALREADY started preparing the order. What do you do?",
+        options: [
+          { text: "Don't cancel and use the 'No Cancellation Policy' script.", correct: true },
+          { text: "Cancel with the reason: (CST- Duplicate order).", correct: false },
+          { text: "Cancel with the reason: (Canceled before preparation).", correct: false },
+          { text: "Ask the restaurant to stop cooking and cancel the order anyway.", correct: false }
+        ],
+        rule: "In tGO & tMP (Not Picked Up → FV): If the restaurant has already Started Preparing the order, do NOT cancel — use the 'No Cancellation Policy' script."
+      }
+    ];
+
+    /* =========================================================================
+       3. GAME STATE & CONFIG
+       ========================================================================= */
+    const AVATARS = ["🎧", "🛵", "🍔", "⚡", "🦊", "🦁"];
+    const TURN_SECONDS = 25;
+    const BASE_POINTS = 100;
+    const SPEED_MULTIPLIER = 4; // remainingSeconds * 4
+
+    // Turn sequence: P1 Q1 -> P2 Q1 -> P1 Q2 -> P2 Q2
+    const TURN_ORDER = [
+      { playerIdx: 0, qNum: 1 },
+      { playerIdx: 1, qNum: 1 },
+      { playerIdx: 0, qNum: 2 },
+      { playerIdx: 1, qNum: 2 }
+    ];
+
+    const state = {
+      players: [
+        { name: "Agent 1", avatar: "🎧", score: 0, results: [] },
+        { name: "Agent 2", avatar: "🛵", score: 0, results: [] }
+      ],
+      questionDeck: [],     // Remaining unused questions from the 8-question bank
+      matchQuestions: [],   // 4 questions dealt for the current match
+      turnIndex: 0,         // 0..3
+      currentOptions: [],
+      timeLeft: TURN_SECONDS,
+      timerId: null,
+      answered: false
+    };
+
+    /* =========================================================================
+       4. DOM ELEMENTS
+       ========================================================================= */
+    const screens = {
+      setup: document.getElementById("screen-setup"),
+      game: document.getElementById("screen-game"),
+      results: document.getElementById("screen-results")
+    };
+
+    const el = {
+      muteBtn: document.getElementById("mute-btn"),
+      muteIcon: document.getElementById("mute-icon"),
+      muteText: document.getElementById("mute-text"),
+
+      p1Name: document.getElementById("p1-name"),
+      p2Name: document.getElementById("p2-name"),
+      p1Avatars: document.getElementById("p1-avatars"),
+      p2Avatars: document.getElementById("p2-avatars"),
+      btnStartDuel: document.getElementById("btn-start-duel"),
+
+      sbP1: document.getElementById("sb-p1"),
+      sbP2: document.getElementById("sb-p2"),
+      sbP1Avatar: document.getElementById("sb-p1-avatar"),
+      sbP2Avatar: document.getElementById("sb-p2-avatar"),
+      sbP1Name: document.getElementById("sb-p1-name"),
+      sbP2Name: document.getElementById("sb-p2-name"),
+      sbP1Score: document.getElementById("sb-p1-score"),
+      sbP2Score: document.getElementById("sb-p2-score"),
+      sbP1Dots: document.getElementById("sb-p1-dots"),
+      sbP2Dots: document.getElementById("sb-p2-dots"),
+
+      turnBanner: document.getElementById("turn-banner"),
+      turnAvatar: document.getElementById("turn-avatar"),
+      turnEyebrow: document.getElementById("turn-eyebrow"),
+      turnHeadline: document.getElementById("turn-headline"),
+      btnShowTicket: document.getElementById("btn-show-ticket"),
+
+      ticketWorkspace: document.getElementById("ticket-workspace"),
+      activeTurnLabel: document.getElementById("active-turn-label"),
+      timerBadge: document.getElementById("timer-badge"),
+      timerSec: document.getElementById("timer-sec"),
+      timerBar: document.getElementById("timer-bar"),
+      ticketCard: document.getElementById("ticket-card"),
+      ticketTags: document.getElementById("ticket-tags"),
+      scenarioPrompt: document.getElementById("scenario-prompt"),
+      optionsGrid: document.getElementById("options-grid"),
+
+      feedbackBox: document.getElementById("feedback-box"),
+      fbTitle: document.getElementById("fb-title"),
+      fbPts: document.getElementById("fb-pts"),
+      fbRule: document.getElementById("fb-rule"),
+      btnNextTurn: document.getElementById("btn-next-turn"),
+
+      resCrown: document.getElementById("res-crown"),
+      resPill: document.getElementById("res-pill"),
+      resHeadline: document.getElementById("res-headline"),
+      resSub: document.getElementById("res-sub"),
+      resBoxP1: document.getElementById("res-box-p1"),
+      resBoxP2: document.getElementById("res-box-p2"),
+      resP1Avatar: document.getElementById("res-p1-avatar"),
+      resP2Avatar: document.getElementById("res-p2-avatar"),
+      resP1Name: document.getElementById("res-p1-name"),
+      resP2Name: document.getElementById("res-p2-name"),
+      resP1Score: document.getElementById("res-p1-score"),
+      resP2Score: document.getElementById("res-p2-score"),
+      resP1Meta: document.getElementById("res-p1-meta"),
+      resP2Meta: document.getElementById("res-p2-meta"),
+      resP1Badges: document.getElementById("res-p1-badges"),
+      resP2Badges: document.getElementById("res-p2-badges"),
+      btnNewDuel: document.getElementById("btn-new-duel"),
+      btnChangePlayers: document.getElementById("btn-change-players"),
+      deckStatus: document.getElementById("deck-status")
+    };
+
+    /* =========================================================================
+       5. HELPERS
+       ========================================================================= */
+    function shuffle(arr) {
+      const copy = arr.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function showScreen(key) {
+      Object.values(screens).forEach(s => s.classList.remove("active"));
+      screens[key].classList.add("active");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    /**
+     * Deals 4 fresh questions from the 8-question bank without immediate repeats.
+     * Once all 8 are used, smoothly reshuffles the full bank.
+     */
+    function dealFourQuestions() {
+      if (state.questionDeck.length < 4) {
+        state.questionDeck = shuffle(QUESTION_BANK);
+      }
+      return state.questionDeck.splice(0, 4);
+    }
+
+    /* =========================================================================
+       6. SETUP AVATAR PICKERS
+       ========================================================================= */
+    function renderAvatarPickers() {
+      [el.p1Avatars, el.p2Avatars].forEach((container, pIdx) => {
+        container.innerHTML = "";
+        AVATARS.forEach(emoji => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "avatar-btn" + (state.players[pIdx].avatar === emoji ? " selected" : "");
+          btn.textContent = emoji;
+          btn.setAttribute("aria-label", `Select ${emoji} avatar`);
+          btn.addEventListener("click", () => {
+            SoundFX.click();
+            state.players[pIdx].avatar = emoji;
+            container.querySelectorAll(".avatar-btn").forEach(b => b.classList.remove("selected"));
+            btn.classList.add("selected");
+          });
+          container.appendChild(btn);
+        });
+      });
+    }
+
+    /* =========================================================================
+       7. MATCH LIFECYCLE
+       ========================================================================= */
+    function startDuel(useInputs = true) {
+      SoundFX.click();
+      stopConfetti();
+      clearInterval(state.timerId);
+
+      if (useInputs) {
+        state.players[0].name = el.p1Name.value.trim() || "Agent 1";
+        state.players[1].name = el.p2Name.value.trim() || "Agent 2";
+      }
+
+      state.players[0].score = 0;
+      state.players[0].results = [];
+      state.players[1].score = 0;
+      state.players[1].results = [];
+
+      state.matchQuestions = dealFourQuestions();
+      state.turnIndex = 0;
+
+      updateScoreboard();
+      showScreen("game");
+      prepareTurnBanner();
+    }
+
+    function updateScoreboard() {
+      const turn = TURN_ORDER[state.turnIndex];
+      const activeIdx = turn ? turn.playerIdx : -1;
+
+      el.sbP1Avatar.textContent = state.players[0].avatar;
+      el.sbP2Avatar.textContent = state.players[1].avatar;
+      el.sbP1Name.textContent = state.players[0].name;
+      el.sbP2Name.textContent = state.players[1].name;
+      el.sbP1Score.textContent = state.players[0].score;
+      el.sbP2Score.textContent = state.players[1].score;
+
+      el.sbP1.classList.toggle("active-p1", activeIdx === 0);
+      el.sbP2.classList.toggle("active-p2", activeIdx === 1);
+
+      // Update 2 progress dots for each player
+      [el.sbP1Dots, el.sbP2Dots].forEach((dotWrap, pIdx) => {
+        const dots = dotWrap.querySelectorAll(".p-dot");
+        dots.forEach((dot, i) => {
+          dot.className = "p-dot";
+          const res = state.players[pIdx].results[i];
+          if (res === true) dot.classList.add("correct");
+          else if (res === false) dot.classList.add("wrong");
+        });
+      });
+    }
+
+    function prepareTurnBanner() {
+      clearInterval(state.timerId);
+      const { playerIdx, qNum } = TURN_ORDER[state.turnIndex];
+      const player = state.players[playerIdx];
+      const isP1 = playerIdx === 0;
+
+      updateScoreboard();
+
+      el.ticketWorkspace.classList.remove("active");
+      el.turnBanner.style.display = "block";
+      el.turnBanner.className = `turn-banner ${isP1 ? "theme-p1" : "theme-p2"}`;
+
+      el.turnAvatar.textContent = player.avatar;
+      el.turnEyebrow.textContent = isP1 ? "Player 1 • Orange Team" : "Player 2 • Blue Team";
+      el.turnEyebrow.className = `turn-eyebrow ${isP1 ? "p1-text" : "p2-text"}`;
+      el.turnHeadline.textContent = `${player.name}'s Turn — Question ${qNum} of 2!`;
+
+      el.btnShowTicket.className = `btn ${isP1 ? "btn-primary" : "btn-p2"}`;
+    }
+
+    function revealTicket() {
+      SoundFX.click();
+      state.answered = false;
+
+      const { playerIdx, qNum } = TURN_ORDER[state.turnIndex];
+      const player = state.players[playerIdx];
+      const isP1 = playerIdx === 0;
+      const q = state.matchQuestions[state.turnIndex];
+
+      el.turnBanner.style.display = "none";
+      el.ticketWorkspace.classList.add("active");
+      el.feedbackBox.className = "feedback-box";
+
+      // Header & Prompt Styling
+      el.activeTurnLabel.textContent = `${player.avatar} ${player.name} • Question ${qNum} of 2`;
+      el.scenarioPrompt.textContent = q.prompt;
+      el.scenarioPrompt.className = `scenario-prompt ${isP1 ? "" : "p2-accent"}`;
+      el.ticketCard.className = `ticket-card ${isP1 ? "" : "p2-mode"}`;
+
+      // Ticket Metadata Tags
+      const platformClass = q.platform === "tGO" ? "tag-tgo" : "tag-tmp";
+      el.ticketTags.innerHTML = `
+        <span class="tag ${platformClass}">${q.platform}</span>
+        <span class="tag tag-status">${q.status}</span>
+        <span class="tag tag-vendor">${q.vendor}</span>
+      `;
+
+      // Render 4 Shuffled Options
+      state.currentOptions = shuffle(q.options);
+      el.optionsGrid.innerHTML = "";
+      const letters = ["A", "B", "C", "D"];
+
+      state.currentOptions.forEach((opt, idx) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "opt-btn";
+        btn.innerHTML = `
+          <span class="opt-letter">${letters[idx]}</span>
+          <span class="opt-text">${opt.text}</span>
+        `;
+        btn.addEventListener("click", () => submitAnswer(idx));
+        el.optionsGrid.appendChild(btn);
+      });
+
+      el.btnNextTurn.textContent =
+        state.turnIndex === TURN_ORDER.length - 1 ? "See Final Results 🏆" : "Next Turn ➡️";
+
+      startTimer(isP1);
+    }
+
+    function startTimer(isP1) {
+      clearInterval(state.timerId);
+      state.timeLeft = TURN_SECONDS;
+      updateTimerUI(isP1);
+
+      state.timerId = setInterval(() => {
+        state.timeLeft -= 1;
+        updateTimerUI(isP1);
+
+        if (state.timeLeft <= 5 && state.timeLeft > 0) {
+          SoundFX.tick();
+        }
+
+        if (state.timeLeft <= 0) {
+          clearInterval(state.timerId);
+          handleTimeout();
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI(isP1) {
+      const pct = Math.max(0, (state.timeLeft / TURN_SECONDS) * 100);
+      el.timerSec.textContent = state.timeLeft;
+      el.timerBar.style.width = `${pct}%`;
+
+      el.timerBar.className = `timer-bar ${isP1 ? "" : "p2-bar"}`;
+      el.timerBadge.classList.remove("danger");
+
+      if (state.timeLeft <= 5) {
+        el.timerBar.classList.add("danger");
+        el.timerBadge.classList.add("danger");
+      } else if (state.timeLeft <= 10) {
+        el.timerBar.classList.add("warn");
+      }
+    }
+
+    function submitAnswer(chosenIdx) {
+      if (state.answered) return;
+      state.answered = true;
+      clearInterval(state.timerId);
+
+      const { playerIdx } = TURN_ORDER[state.turnIndex];
+      const q = state.matchQuestions[state.turnIndex];
+      const chosen = state.currentOptions[chosenIdx];
+      const buttons = el.optionsGrid.querySelectorAll(".opt-btn");
+
+      buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        if (state.currentOptions[i].correct) btn.classList.add("is-correct");
+        if (i === chosenIdx && !state.currentOptions[i].correct) btn.classList.add("is-wrong");
+      });
+
+      if (chosen.correct) {
+        const speedBonus = state.timeLeft * SPEED_MULTIPLIER;
+        const totalEarned = BASE_POINTS + speedBonus;
+        state.players[playerIdx].score += totalEarned;
+        state.players[playerIdx].results.push(true);
+
+        showFeedback(
+          true,
+          "✅ Spot On! Correct SOP Action",
+          `+${totalEarned} pts (${BASE_POINTS} base + ${speedBonus} speed)`,
+          q.rule
+        );
+        SoundFX.correct();
+      } else {
+        state.players[playerIdx].results.push(false);
+        showFeedback(
+          false,
+          "❌ Not Quite — Check the SOP!",
+          "+0 pts",
+          q.rule
+        );
+        SoundFX.wrong();
+      }
+
+      updateScoreboard();
+    }
+
+    function handleTimeout() {
+      if (state.answered) return;
+      state.answered = true;
+
+      const { playerIdx } = TURN_ORDER[state.turnIndex];
+      const q = state.matchQuestions[state.turnIndex];
+      const buttons = el.optionsGrid.querySelectorAll(".opt-btn");
+
+      buttons.forEach((btn, i) => {
+        btn.disabled = true;
+        if (state.currentOptions[i].correct) btn.classList.add("is-correct");
+      });
+
+      state.players[playerIdx].results.push(false);
+      showFeedback(false, "⏰ Time's Up!", "+0 pts", q.rule);
+      SoundFX.wrong();
+      updateScoreboard();
+    }
+
+    function showFeedback(isCorrect, title, ptsText, ruleText) {
+      el.feedbackBox.className = `feedback-box show ${isCorrect ? "fb-correct" : "fb-wrong"}`;
+      el.fbTitle.textContent = title;
+      el.fbPts.textContent = ptsText;
+      el.fbRule.textContent = ruleText;
+      el.feedbackBox.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    function advanceTurn() {
+      SoundFX.click();
+      if (state.turnIndex < TURN_ORDER.length - 1) {
+        state.turnIndex += 1;
+        prepareTurnBanner();
+      } else {
+        showResults();
+      }
+    }
+
+    /* =========================================================================
+       8. WINNER / RESULTS SCREEN
+       ========================================================================= */
+    function showResults() {
+      clearInterval(state.timerId);
+      const p1 = state.players[0];
+      const p2 = state.players[1];
+
+      const p1Correct = p1.results.filter(Boolean).length;
+      const p2Correct = p2.results.filter(Boolean).length;
+
+      el.resBoxP1.className = "res-player-box";
+      el.resBoxP2.className = "res-player-box";
+
+      if (p1.score > p2.score) {
+        el.resCrown.textContent = "🏆";
+        el.resPill.textContent = "Orange Team Victory";
+        el.resHeadline.textContent = `${p1.avatar} ${p1.name} Wins the Duel!`;
+        el.resSub.textContent = `Outscored ${p2.name} by ${p1.score - p2.score} points!`;
+        el.resBoxP1.classList.add("is-winner-p1");
+      } else if (p2.score > p1.score) {
+        el.resCrown.textContent = "🏆";
+        el.resPill.textContent = "Blue Team Victory";
+        el.resHeadline.textContent = `${p2.avatar} ${p2.name} Wins the Duel!`;
+        el.resSub.textContent = `Outscored ${p1.name} by ${p2.score - p1.score} points!`;
+        el.resBoxP2.classList.add("is-winner-p2");
+      } else {
+        el.resCrown.textContent = "🤝";
+        el.resPill.textContent = "Dead Heat";
+        el.resHeadline.textContent = "It's an Epic Tie!";
+        el.resSub.textContent = `Both agents finished neck-and-neck with ${p1.score} points!`;
+      }
+
+      // Populate player breakdown cards
+      el.resP1Avatar.textContent = p1.avatar;
+      el.resP1Name.textContent = p1.name;
+      el.resP1Score.textContent = p1.score;
+      el.resP1Meta.textContent = `${p1Correct}/2 Correct`;
+      el.resP1Badges.innerHTML = p1.results
+        .map((ok, i) => `<span class="mini-q-badge ${ok ? "ok" : "bad"}">Q${i + 1}: ${ok ? "✓" : "✕"}</span>`)
+        .join("");
+
+      el.resP2Avatar.textContent = p2.avatar;
+      el.resP2Name.textContent = p2.name;
+      el.resP2Score.textContent = p2.score;
+      el.resP2Meta.textContent = `${p2Correct}/2 Correct`;
+      el.resP2Badges.innerHTML = p2.results
+        .map((ok, i) => `<span class="mini-q-badge ${ok ? "ok" : "bad"}">Q${i + 1}: ${ok ? "✓" : "✕"}</span>`)
+        .join("");
+
+      const remainingFresh = state.questionDeck.length;
+      el.deckStatus.textContent =
+        remainingFresh >= 4
+          ? `${remainingFresh} unseen SOP questions ready for the next duel!`
+          : `All 8 SOP questions played — next duel will reshuffle the full bank!`;
+
+      showScreen("results");
+      SoundFX.fanfare();
+      launchConfetti();
+    }
+
+    /* =========================================================================
+       9. RESPONSIVE CANVAS CONFETTI
+       ========================================================================= */
+    const confettiCanvas = document.getElementById("confetti-canvas");
+    const ctx = confettiCanvas.getContext("2d");
+    let confettiPieces = [];
+    let confettiFrame = null;
+
+    function resizeConfetti() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener("resize", resizeConfetti);
+    resizeConfetti();
+
+    function launchConfetti() {
+      stopConfetti();
+      const colors = ["#FF5A00", "#FF8533", "#0284C7", "#38BDF8", "#10B981", "#F59E0B"];
+      confettiPieces = Array.from({ length: 140 }, () => ({
+        x: Math.random() * confettiCanvas.width,
+        y: Math.random() * -confettiCanvas.height * 0.7,
+        w: 8 + Math.random() * 6,
+        h: 4 + Math.random() * 5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: (Math.random() - 0.5) * 4,
+        vy: 2.8 + Math.random() * 4.2,
+        rot: Math.random() * 360,
+        vRot: (Math.random() - 0.5) * 11
+      }));
+
+      let frames = 0;
+      function loop() {
+        frames++;
+        ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiPieces.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.rot += p.vRot;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rot * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        });
+
+        if (frames < 240) {
+          confettiFrame = requestAnimationFrame(loop);
+        } else {
+          stopConfetti();
+        }
+      }
+      confettiFrame = requestAnimationFrame(loop);
+    }
+
+    function stopConfetti() {
+      if (confettiFrame) cancelAnimationFrame(confettiFrame);
+      confettiFrame = null;
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    }
+
+    /* =========================================================================
+       10. EVENT LISTENERS & KEYBOARD SHORTCUTS
+       ========================================================================= */
+    el.muteBtn.addEventListener("click", () => {
+      const isMuted = SoundFX.toggleMute();
+      el.muteIcon.textContent = isMuted ? "🔇" : "🔊";
+      el.muteText.textContent = isMuted ? "Muted" : "Sound On";
+    });
+
+    el.btnStartDuel.addEventListener("click", () => startDuel(true));
+    el.btnShowTicket.addEventListener("click", revealTicket);
+    el.btnNextTurn.addEventListener("click", advanceTurn);
+    el.btnNewDuel.addEventListener("click", () => startDuel(false));
+    el.btnChangePlayers.addEventListener("click", () => {
+      SoundFX.click();
+      stopConfetti();
+      showScreen("setup");
+    });
+
+    // Keyboard shortcuts for smooth live presentation control
+    document.addEventListener("keydown", (e) => {
+      if (!screens.game.classList.contains("active")) return;
+
+      // Press Enter/Space on Turn Banner to reveal ticket
+      if (el.turnBanner.style.display !== "none" && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        revealTicket();
+        return;
+      }
+
+      // Press 1-4 to pick an option during active ticket
+      if (el.ticketWorkspace.classList.contains("active") && !state.answered) {
+        if (["1", "2", "3", "4"].includes(e.key)) {
+          const idx = parseInt(e.key, 10) - 1;
+          if (idx < state.currentOptions.length) submitAnswer(idx);
+        }
+      } else if (el.ticketWorkspace.classList.contains("active") && state.answered) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          advanceTurn();
+        }
+      }
+    });
+
+    // Initialize on load
+    window.onload = function () {
+      renderAvatarPickers();
+    };
+  </script>
+</body>
+</html>
