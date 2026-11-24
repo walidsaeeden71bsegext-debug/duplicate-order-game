@@ -1493,7 +1493,7 @@
         platform: "tMP",
         status: "Successful • Not Picked Up",
         vendor: "NFV (Non-Food)",
-        prompt: "A tMP duplicate order is Not Picked Up from an NFV vendor. You try calling the vendor to inform them, and they are unreachable. What do you do?",
+        prompt: "A TGO duplicate order is Not Picked Up from an FV vendor. You try calling the vendor to inform them, and they are unreachable. What do you do?",
         options: [
           { text: "Cancel with the reason (CST- Duplicate order) whether reachable or unreachable.", correct: true },
           { text: "Don't cancel because the vendor is unreachable — use 'No Cancellation Policy'.", correct: false },
@@ -1521,7 +1521,7 @@
         platform: "tGO",
         status: "Successful • Not Picked Up",
         vendor: "FV (Preparing)",
-        prompt: "On a tGO duplicate order, the vendor confirms it is Not Picked Up, it's an FV restaurant, and they ALREADY started preparing the order. What do you do?",
+        prompt: "On a TMP duplicate order, the vendor confirms it is Not Picked Up, it's an FV restaurant, and they ALREADY started preparing the order. What do you do?",
         options: [
           { text: "Don't cancel and use the 'No Cancellation Policy' script.", correct: true },
           { text: "Cancel with the reason: (CST- Duplicate order).", correct: false },
